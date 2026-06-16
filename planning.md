@@ -9,9 +9,6 @@
 
 ## Tools
 
-List every tool your agent will use. For each tool, fill in all four fields.
-You must have at least 3 tools. The three required tools are listed — add any additional tools below them.
-
 ### Tool 1: search_listings
 
 **What it does:**
@@ -140,13 +137,13 @@ Write out what a full user interaction looks like from start to finish — tool 
 **Example user query:** "I'm looking for a vintage graphic tee under $30. I mostly wear baggy jeans and chunky sneakers. What's out there and how would I style it?"
 
 **Step 1:**
-<!-- What does the agent do first? Which tool is called? With what input? -->
+The agent first searches using search_listings("vintage graphic tee", size="M", max_price = 30.0) and this function returns the top 3 matching listings. The top result is chosen.
 
 **Step 2:**
-<!-- What happens next? What was returned from step 1? What tool is called now? -->
+Step 1 returns the top search result (item that is most relevant to user's search terms) and then suggest_outfit(new_item=<new item>, wardrobe = <user's wardrobe>) is called. This function suggests an outfit using the new item and the user's existing wardrobe.
 
 **Step 3:**
-<!-- Continue until the full interaction is complete -->
+Step 2 returns a suggested outfit based on the new item and existing wardrobe. Next, a fit card is created using create_fit_card(outfit=<suggestion>, new_item=<new item>).
 
 **Final output to user:**
-<!-- What does the user actually see at the end? -->
+Step 3 returns a fit card using the new item, so the user finally sees this fit card with the full outfit using the new item and their wardrobe (full styled look).
