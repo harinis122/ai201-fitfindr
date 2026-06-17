@@ -144,9 +144,9 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
             "You are a personal stylist helping someone style a thrifted find.\n\n"
             f"New item:\n{new_item_text}\n\n"
             f"User's wardrobe:\n{wardrobe_text}\n\n"
-            "Suggest 1–2 complete outfits using the new item paired with specific pieces "
+            "Suggest 1 complete outfit using the new item paired with specific pieces "
             "from the wardrobe above. Name the exact wardrobe pieces in each outfit. "
-            "Keep each suggestion to 2–3 sentences.\n\n"
+            "Keep each suggestion to 2–3 sentences but keep it under 300 characters.\n\n"
             "IMPORTANT: if none of the wardrobe pieces are compatible with the new item, "
             "reply with exactly the single word: NO_COMPATIBLE_OUTFIT"
         )
@@ -209,6 +209,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         "- Captures the specific vibe of the outfit\n"
         "- Sounds fresh and personal\n\n"
         "Write only the caption — no labels, no hashtags, no preamble."
+        "Please keep it under 125 characters."
     )
 
     response = client.chat.completions.create(
