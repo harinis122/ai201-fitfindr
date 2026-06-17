@@ -41,7 +41,7 @@ This function suggests an outfit using the user's newly suggested article of clo
 This function returns a string suggesting a possible outfit.
 
 **What happens if it fails or returns nothing:**
-If no outfit can be created, the user is informed that they do not have compatible pieces to pair their new piece with, and are encouraged to continue shopping. If the user's wardrobe is empty, they are informed so and encouraged to continue shopping.
+If no outfit can be created, the user is informed that they do not have compatible pieces to pair their new piece with, and are encouraged to continue shopping. If the user's wardrobe is empty, they are given general styling ideas for the new item.
 ---
 
 ### Tool 3: create_fit_card
@@ -69,7 +69,7 @@ An error message is displayed. This function should not be run if the user is no
 
 2. search_listing gets called. It looks for compatible clothing items given the user's query. If no items are found, the user is informed so and is asked to try searching again differently. Otherwise, the top 3 compatible items are returned and FitFindr selects the top item.
 
-3. suggest_outfit gets called. It aims to suggest an outfit for the user based on the new item and wardrobe. If the user has no compatible items to pair the new item with or the user's wardrobe is empty, the user's new item is added to their wardrobe and they are directed to purchase more items. Otherwise, the outfit is suggested.
+3. suggest_outfit gets called. It aims to suggest an outfit for the user based on the new item and wardrobe. If the user has no compatible items to pair the new item with, the user is told to retry their search. If the user's wardrobe is empty, the user is given general styling ideas. Otherwise, the outfit is suggested normally.
 
 4. create_fit_card gets called. It outputs a catchy and short caption based on the outfit suggested. If no outfit was suggested, this function should not run.
 
@@ -103,23 +103,13 @@ For each tool, describe the specific failure mode you're handling and what the a
 | Tool | Failure mode | Agent response |
 |------|-------------|----------------|
 | search_listings | No results match the query |The user is told to search again|
-| suggest_outfit | Wardrobe is empty |The new item is added to the wardrobe and the user is told to search again|
+| suggest_outfit | Wardrobe is empty |The user is given general styling ideas|
+| suggest_outfit | Wardrobe has no compatible items |The user is told to retry their search|
 | create_fit_card | Outfit input is missing or incomplete |N/A: This function does not run with empty or incomplete input|
 
 ---
 
 ## Architecture
-
-<!-- Draw a diagram of your agent showing how the components connect:
-     User input → Planning Loop → Tools (search_listings, suggest_outfit, create_fit_card)
-                                                                          ↕
-                                                                   State / Session
-     Show what triggers each tool, how state flows between them, and where error paths branch off.
-     Use ASCII art or a Mermaid diagram (https://mermaid.js.org/syntax/flowchart.html).
-     Do NOT embed an image — graders need to read your diagram directly in the file;
-     an embedded image or screenshot cannot be evaluated.
-     You'll share this diagram with an AI tool when asking it to implement
-     the planning loop and each individual tool. -->
 
 User query
     │
@@ -154,16 +144,23 @@ search_listings(description, size, max_price)
             ▼
 suggest_outfit(selected_item, wardrobe)
     │
-    ├── wardrobe is empty OR no compatible outfit can be created
+    ├── no compatible outfit can be created
     │       │
     │       ▼
     │   Session:
     │     outfit_suggestion = None
     │     fit_card = None
     │
-    |   Print: "Your wardrobe is empty or does not have enough compatible pieces yet. Try adding more wardrobe items or continue shopping."
+    |   Print: "Your wardrobe does not have enough compatible pieces yet. Try adding more wardrobe items or continue shopping."
     │   Return None
     │   NOTE: create_fit_card does not run because there is no complete outfit.
+    |
+    ├── wardrobe is empty
+    │       │
+    │       ▼
+    │   Session:
+    │     outfit_suggestion = outfit_suggestion
+    │   NOTE: general styling ideas for the item are given
     │
     └── outfit_suggestion is valid
             │

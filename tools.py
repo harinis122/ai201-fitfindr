@@ -59,18 +59,37 @@ def search_listings(
     Each listing dict has the following fields:
         id, title, description, category, style_tags (list), size,
         condition, price (float), colors (list), brand, platform
-
-    TODO:
-        1. Load all listings with load_listings().
-        2. Filter by max_price and size (if provided).
-        3. Score each remaining listing by keyword overlap with `description`.
-        4. Drop any listings with a score of 0 (no relevant matches).
-        5. Sort by score, highest first, and return the listing dicts.
-
-    Before writing code, fill in the Tool 1 section of planning.md.
     """
-    # Replace this with your implementation
-    return []
+    listings = load_listings()
+
+    # Filter by price and size
+    candidates = []
+    for item in listings:
+        if max_price is not None and item["price"] > max_price:
+            continue
+        if size is not None and size.upper() not in item["size"].upper():
+            continue
+        candidates.append(item)
+
+    # Build a searchable text blob for each candidate and score by keyword overlap
+    keywords = [w.lower() for w in description.split() if w]
+
+    def score(item):
+        searchable = " ".join([
+            item["title"],
+            item["description"],
+            item["category"],
+            " ".join(item.get("style_tags", [])),
+            " ".join(item.get("colors", [])),
+            item.get("brand") or "",
+        ]).lower()
+        return sum(1 for kw in keywords if kw in searchable)
+
+    scored = [(score(item), item) for item in candidates]
+    scored = [(s, item) for s, item in scored if s > 0]
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    return [item for _, item in scored[:3]]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
@@ -88,20 +107,55 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
         A non-empty string with outfit suggestions.
         If the wardrobe is empty, offer general styling advice for the item
         rather than raising an exception or returning an empty string.
-
-    TODO:
-        1. Check whether wardrobe['items'] is empty.
-        2. If empty: call the LLM with a prompt for general styling ideas
-           (what kinds of items pair well, what vibe it suits, etc.).
-        3. If not empty: format the wardrobe items into a prompt and ask
-           the LLM to suggest specific outfit combinations using the new item
-           and named pieces from the wardrobe.
-        4. Return the LLM's response as a string.
-
-    Before writing code, fill in the Tool 2 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+    items = wardrobe.get("items", [])
+    client = _get_groq_client()
+
+    # Describe the new item for the LLM
+    new_item_text = (
+        f"{new_item['title']} — {new_item['description']} "
+        f"(category: {new_item['category']}, "
+        f"style tags: {', '.join(new_item.get('style_tags', []))}, "
+        f"colors: {', '.join(new_item.get('colors', []))})"
+    )
+
+    if not items:
+        prompt = (
+            "You are a personal stylist helping someone style a thrifted find. "
+            "The user's wardrobe is empty, so give general styling advice for the item.\n\n"
+            f"New item:\n{new_item_text}\n\n"
+            "Describe what kinds of clothing pieces pair well with this item, "
+            "what vibe or aesthetic it suits, and what occasions it works for. "
+            "Keep your advice to 2–3 sentences."
+        )
+    else:
+        # Format wardrobe items into a readable list
+        wardrobe_lines = []
+        for item in items:
+            colors = ", ".join(item.get("colors", []))
+            tags = ", ".join(item.get("style_tags", []))
+            line = f"- {item['name']} (colors: {colors}, style: {tags})"
+            if item.get("notes"):
+                line += f" — {item['notes']}"
+            wardrobe_lines.append(line)
+        wardrobe_text = "\n".join(wardrobe_lines)
+
+        prompt = (
+            "You are a personal stylist helping someone style a thrifted find.\n\n"
+            f"New item:\n{new_item_text}\n\n"
+            f"User's wardrobe:\n{wardrobe_text}\n\n"
+            "Suggest 1–2 complete outfits using the new item paired with specific pieces "
+            "from the wardrobe above. Name the exact wardrobe pieces in each outfit. "
+            "Keep each suggestion to 2–3 sentences."
+        )
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+    )
+
+    return response.choices[0].message.content
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -133,5 +187,28 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
 
     Before writing code, fill in the Tool 3 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return "Error: no outfit suggestion available — cannot generate a fit card."
+
+    client = _get_groq_client()
+
+    prompt = (
+        "You are writing an Instagram/TikTok OOTD caption for someone who just thrifted a new piece.\n\n"
+        f"Thrifted item: {new_item['title']} — ${new_item['price']} on {new_item['platform']}\n"
+        f"Item description: {new_item['description']}\n\n"
+        f"Outfit: {outfit}\n\n"
+        "Write a 2–4 sentence caption that:\n"
+        "- Feels casual and authentic, like a real OOTD post (not a product description)\n"
+        "- Mentions the item name, price, and platform naturally, each exactly once\n"
+        "- Captures the specific vibe of the outfit\n"
+        "- Sounds fresh and personal\n\n"
+        "Write only the caption — no labels, no hashtags, no preamble."
+    )
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=1.4,
+    )
+
+    return response.choices[0].message.content
