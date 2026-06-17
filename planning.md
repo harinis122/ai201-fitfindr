@@ -65,7 +65,7 @@ An error message is displayed. This function should not be run if the user is no
 
 **How does your agent decide which tool to call next?**
 <!-- Describe the logic your planning loop uses. What does it look at? What conditions change its behavior? How does it know when it's done? -->
-1. The user submits a user query detailing their preferred article of clothing, their size, and their maximum price.
+1. The user submits a user query (parsed using regex) detailing their preferred article of clothing, their size, and their maximum price.
 
 2. search_listing gets called. It looks for compatible clothing items given the user's query. If no items are found, the user is informed so and is asked to try searching again differently. Otherwise, the top 3 compatible items are returned and FitFindr selects the top item.
 

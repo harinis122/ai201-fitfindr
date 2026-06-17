@@ -104,9 +104,9 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
                   wardrobe item dicts. May be empty — handle this gracefully.
 
     Returns:
-        A non-empty string with outfit suggestions.
-        If the wardrobe is empty, offer general styling advice for the item
-        rather than raising an exception or returning an empty string.
+        A non-empty string with outfit suggestions, or None if the wardrobe
+        items are incompatible with the new item.
+        If the wardrobe is empty, returns general styling advice instead.
     """
     items = wardrobe.get("items", [])
     client = _get_groq_client()
@@ -146,7 +146,9 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
             f"User's wardrobe:\n{wardrobe_text}\n\n"
             "Suggest 1–2 complete outfits using the new item paired with specific pieces "
             "from the wardrobe above. Name the exact wardrobe pieces in each outfit. "
-            "Keep each suggestion to 2–3 sentences."
+            "Keep each suggestion to 2–3 sentences.\n\n"
+            "IMPORTANT: if none of the wardrobe pieces are compatible with the new item, "
+            "reply with exactly the single word: NO_COMPATIBLE_OUTFIT"
         )
 
     response = client.chat.completions.create(
@@ -155,7 +157,11 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
         temperature=0.7,
     )
 
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    if "NO_COMPATIBLE_OUTFIT" in content:
+        return None
+
+    return content
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
